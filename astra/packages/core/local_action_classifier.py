@@ -5,15 +5,51 @@ from packages.core.website_registry import WebsiteRegistry
 
 class LocalActionClassifier:
     """
-    Lightweight, deterministic local classifier for simple UI and general tasks.
-    Avoids expensive LLM calls for operations like clicking, opening apps, or basic queries.
-    Replaces FastIntentClassifier.
+    Lightweight, deterministic local classifier for UI, system, and web tasks.
+    Enables instant offline execution without mandatory cloud LLM dependency.
     """
     def __init__(self):
         self.website_registry = WebsiteRegistry()
-        # Define strict regex patterns for high confidence
-        # Ordering matters: more specific patterns first.
+        
         self.patterns = {
+            # YouTube search patterns (including compound "open youtube and search for X")
+            "youtube_search": [
+                r"^(?:open|launch|go to)[\s]+(?:the[\s]+)?(?:youtube|yt)[\s]+(?:and[\s]+)?(?:search|look)[\s]+(?:for[\s]+)?(.+)$",
+                r"^(?:search|look)[\s]+(?:for[\s]+)?(.+?)[\s]+(?:on|in)[\s]+(?:the[\s]+)?(?:youtube|yt)$",
+                r"^(?:search|look)[\s]+(?:the[\s]+)?(?:youtube|yt)[\s]+(?:for[\s]+)?(.+)$",
+                r"^(?:play|watch)[\s]+(.+?)[\s]+(?:on|in)[\s]+(?:the[\s]+)?(?:youtube|yt)$",
+                r"^(?:play|watch)[\s]+(.+)$"
+            ],
+            
+            # Google / Web search patterns
+            "web_search": [
+                r"^(?:open|launch|go to)[\s]+(?:google|duckduckgo|bing)[\s]+(?:and[\s]+)?(?:search|look)[\s]+(?:for[\s]+)?(.+)$",
+                r"^(?:search|look)[\s]+(?:for[\s]+)?(.+?)[\s]+(?:on|in)[\s]+(?:google|duckduckgo|bing)$",
+                r"^(?:search|look)[\s]+(?:the[\s]+)?(?:google|duckduckgo|bing)[\s]+(?:for[\s]+)?(.+)$",
+                r"^(?:google|web search|search web for)[\s]+(.+)$",
+                r"^(?:search|look) for[\s]+(.+)$",
+                r"^(?:can you |could you |please )?(?:search|look) for[\s]+(.+?)(?: please)?$"
+            ],
+            
+            # System utilities (Time, Date, Screenshot, Volume)
+            "get_time": [
+                r"^(?:what is |what's |tell me )?(?:the )?(?:current )?time(?: is it)?(?:\s+now)?$",
+                r"^time$"
+            ],
+            "get_date": [
+                r"^(?:what is |what's |tell me )?(?:the )?(?:today's |current )?date(?: is it)?(?:\s+today)?$",
+                r"^date$"
+            ],
+            "take_screenshot": [
+                r"^(?:take|capture|grab)[\s]+(?:a[\s]+)?(?:screenshot|screen capture|screen|snapshot)$",
+                r"^screenshot$"
+            ],
+            "volume_control": [
+                r"^(mute|unmute)[\s]+(?:the[\s]+)?volume$",
+                r"^(increase|raise|turn up|decrease|lower|turn down)[\s]+(?:the[\s]+)?volume$"
+            ],
+            
+            # Application and website open commands
             "open_application": [
                 r"^(?:open|launch|start|run|go to)[\s]+(.+)$",
                 r"^(?:can you |could you |please )?(?:open|launch|start|run|go to)[\s]+(.+?)(?: please)?$"
@@ -25,6 +61,8 @@ class LocalActionClassifier:
             "focus_application": [
                 r"^(?:focus|switch to|bring up)[\s]+(.+)$"
             ],
+            
+            # UI actions
             "click": [
                 r"^(?:in [a-zA-Z0-9\s]+ )?click (?:on )?(?:the )?(.+)$",
                 r"^(?:in [a-zA-Z0-9\s]+ )?tap (?:on )?(?:the )?(.+)$",
@@ -40,17 +78,11 @@ class LocalActionClassifier:
                 r"^press[\s]+(.+)$",
                 r"^hit[\s]+(.+)$"
             ],
-            "search": [
-                r"^(?:search|look) for[\s]+(.+?)[\s]+(?:in|on)[\s]+(.+)$",
-                r"^find[\s]+(.+?)[\s]+(?:in|on)[\s]+(.+)$",
-                r"^(?:search|look) for[\s]+(.+)$",
-                r"^find[\s]+(.+)$",
-                r"^(?:can you |could you |please )?(?:search|look) for[\s]+(.+?)(?: please)?$"
-            ],
             "calculation": [
-                r"^(?:calculate|what is|whats)[\s]+(.+)$",
-                r"^perform[\s]+([\d\.\s\+\-\*\/(times)(into)(multiplied by)]+)$",
-                r"^([\d\.\s\+\-\*\/]+)$" # Just math
+                r"^(?:open|launch|start)[\s]+(?:calculator|calc)[\s]+(?:and[\s]+)?(?:calculate|solve|do)[\s]+(.+)$",
+                r"^(?:calculate|what is|whats|solve|compute)[\s]+(.+)$",
+                r"^perform[\s]+([\d\.\s\+\-\*\/(times)(into)(plus)(minus)(multiplied by)(divided by)]+)$",
+                r"^([\d\.\s\+\-\*\/x\^]+)$"
             ]
         }
         
@@ -61,21 +93,83 @@ class LocalActionClassifier:
         """
         text_lower = text.lower().strip().strip('.?!')
         
-        # We can handle "in app do x" by extracting context, but simple regex handles the rest
-        # Reject complex patterns that need Agent Planner
-        if " and " in text_lower or " then " in text_lower or " while " in text_lower:
-            # Check if it's just "search for x and y" - actually, better to defer to AGENT_PATH for safety
-            if not text_lower.startswith("calculate ") and not text_lower.startswith("perform "):
-                return None 
-            
-        # Match against patterns
+        # Check specific patterns in order of specificity
         for action, regex_list in self.patterns.items():
             for pattern in regex_list:
                 match = re.match(pattern, text_lower)
                 if match:
-                    target_or_query = match.group(1).strip()
+                    # Match group extracting
+                    target_or_query = match.group(1).strip() if match.groups() else ""
                     
-                    if action in ["open_application", "close_application", "focus_application"]:
+                    if action == "youtube_search":
+                        return {
+                            "action": "youtube_search",
+                            "query": target_or_query,
+                            "target_type": TargetType.WEBSITE.value,
+                            "target": "youtube"
+                        }
+                    elif action == "web_search":
+                        return {
+                            "action": "web_search",
+                            "query": target_or_query,
+                            "target_type": TargetType.WEB.value
+                        }
+                    elif action == "get_time":
+                        return {
+                            "action": "get_time",
+                            "target_type": TargetType.UNKNOWN.value
+                        }
+                    elif action == "get_date":
+                        return {
+                            "action": "get_date",
+                            "target_type": TargetType.UNKNOWN.value
+                        }
+                    elif action == "take_screenshot":
+                        return {
+                            "action": "take_screenshot",
+                            "target_type": TargetType.UNKNOWN.value
+                        }
+                    elif action == "volume_control":
+                        return {
+                            "action": "volume_control",
+                            "command": target_or_query,
+                            "target_type": TargetType.UNKNOWN.value
+                        }
+                    
+                    elif any(text_lower.startswith(prefix) for prefix in ["type ", "press ", "click ", "scroll ", "perform "]):
+                        return {
+                            "action": "perform_ui_action",
+                            "command": text_lower,
+                            "target_type": TargetType.UNKNOWN.value
+                        }
+
+                    elif action in ["open_application", "close_application", "focus_application"]:
+                        # Remove "the " prefix if user said "open the calculator"
+                        if target_or_query.startswith("the "):
+                            target_or_query = target_or_query[4:].strip()
+                            
+                        # Check if user wants to open all applications
+                        if action == "open_application" and (
+                            target_or_query.lower() in ["all", "all applications", "all apps", "all the applications", "all application", "all the apps", "all the application", "all of them", "everything", "all my apps", "every app", "every application"] or
+                            "all application" in text_lower or "all apps" in text_lower or "all the apps" in text_lower or "all the applications" in text_lower
+                        ):
+                            return {
+                                "action": "open_all_applications",
+                                "target": "all",
+                                "target_type": TargetType.APPLICATION.value
+                            }
+                            
+                        # Check if user wants to close all applications
+                        if action == "close_application" and (
+                            target_or_query.lower() in ["all", "all applications", "all apps", "all the applications", "all application", "everything", "all of them"] or
+                            "all application" in text_lower or "all apps" in text_lower
+                        ):
+                            return {
+                                "action": "close_all_applications",
+                                "target": "all",
+                                "target_type": TargetType.APPLICATION.value
+                            }
+
                         # Check if it's a known website
                         if action == "open_application" and self.website_registry.is_known_website(target_or_query):
                             website_info = self.website_registry.resolve_website(target_or_query)
@@ -85,20 +179,25 @@ class LocalActionClassifier:
                                 "target_type": TargetType.WEBSITE.value
                             }
                             
+                        # Check if multiple applications are requested (e.g. "notepad and calculator", "chrome, calc, and notepad")
+                        if action == "open_application" and (" and " in target_or_query or "," in target_or_query or " & " in target_or_query):
+                            return {
+                                "action": "open_multiple_applications",
+                                "target": target_or_query,
+                                "target_type": TargetType.APPLICATION.value
+                            }
+                            
                         return {
                             "action": action,
                             "target": target_or_query,
                             "target_type": TargetType.APPLICATION.value
                         }
                     elif action == "click":
-                        # For "In WhatsApp click on search bar", we could extract "WhatsApp" if we made a better regex.
-                        # For simplicity, if it matches "in X click Y", we parse it.
                         app_context = None
                         in_match = re.match(r"^in ([a-zA-Z0-9\s]+) (?:click|tap|select|put)", text_lower)
                         if in_match:
                             app_context = in_match.group(1).strip()
                             
-                        # The regex group 1 is always the target
                         return {
                             "action": action,
                             "target": target_or_query,
@@ -114,22 +213,8 @@ class LocalActionClassifier:
                     elif action == "press_key":
                         return {
                             "action": action,
-                            "command": target_or_query, # e.g. "enter"
+                            "command": target_or_query,
                             "target_type": TargetType.UNKNOWN.value
-                        }
-                    elif action == "search":
-                        # If the regex matched two groups (e.g., query + in application)
-                        query_val = target_or_query
-                        app_context = None
-                        if match.lastindex and match.lastindex >= 2:
-                            query_val = match.group(1).strip()
-                            app_context = match.group(2).strip()
-                            
-                        return {
-                            "action": action,
-                            "query": query_val,
-                            "target_type": TargetType.UNKNOWN.value,
-                            "context_requirements": [f"application:{app_context}"] if app_context else []
                         }
                     elif action == "calculation":
                         return {
@@ -138,5 +223,4 @@ class LocalActionClassifier:
                             "target_type": TargetType.UNKNOWN.value
                         }
                         
-        # If no strict match, fallback to AGENT_PATH
         return None

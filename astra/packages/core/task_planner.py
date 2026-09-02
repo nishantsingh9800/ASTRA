@@ -33,7 +33,10 @@ class TaskPlanner:
         results = []
         max_steps = 5
         step_count = 0
-        
+
+        if isinstance(intent, str):
+            intent = Intent(action="execute", target_type=TargetType.UNKNOWN, raw_text=intent)
+
         while step_count < max_steps:
             step_count += 1
             print(f"\n[TaskPlanner] --- Step {step_count} ---")

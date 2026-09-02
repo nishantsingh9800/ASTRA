@@ -3,7 +3,10 @@ import pytest
 from packages.network.device_manager import DeviceManager
 from packages.network.distributed_task_state import DistributedTaskState
 from packages.network.astra_server import AstraServer
-from astra.tests.mock_android_client import MockAndroidClient
+try:
+    from tests.mock_android_client import MockAndroidClient
+except ImportError:
+    from astra.tests.mock_android_client import MockAndroidClient
 from packages.voice.speech_manager import SpeechManager
 from packages.core.conversation_turn_manager import ConversationTurnManager
 
@@ -71,3 +74,14 @@ def test_remote_sensor_request():
     cam_res = server.request_remote_sensor("phone_123", "camera")
     assert cam_res["status"] == "error"
     assert "Permission denied" in cam_res["message"]
+
+
+def test_active_device_tracking():
+    state = DistributedTaskState()
+
+    assert state.get_active_device() == "local_core"
+
+    state.set_active_device("phone_123")
+
+    assert state.get_active_device() == "phone_123"
+    assert state.get("active_device") == "phone_123"

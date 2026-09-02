@@ -132,7 +132,18 @@ class OSAgent(AstraAgent):
     God Mode.
     """
     def __init__(self):
-        super().__init__("OSAgent", ["run_terminal_command", "open_application", "close_application", "focus_application", "calculation", "type_message", "contact_search"])
+        super().__init__("OSAgent", [
+            "run_terminal_command", 
+            "open_application", 
+            "open_all_applications", 
+            "open_multiple_applications", 
+            "close_application", 
+            "close_all_applications", 
+            "focus_application", 
+            "calculation", 
+            "type_message", 
+            "contact_search"
+        ])
 
     def execute(self, task: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -237,46 +248,179 @@ class OSAgent(AstraAgent):
                         return {"status": "error", "message": f"Could not find or use search field in {active_app}"}
                         
                 return result
-            elif action == "open_website":
-                from packages.device.browser_session_manager import BrowserSessionManager
-                bm = BrowserSessionManager()
-                # target is now a dict
-                if isinstance(command, dict):
-                    target_dict = command
-                else:
-                    target_dict = {"url": f"https://{command}.com", "name": command}
-                    
-                success = bm.navigate(target_dict)
-                if success:
-                    # Context gets updated in browser session manager
-                    return {"status": "dispatched", "message": f"Website launch dispatched: {target_dict.get('url')}"}
-                else:
-                    return {"status": "error", "message": "Invalid URL for website."}
-            elif action == "open_application":
-                app_map = {
-                    "calculator": "calc",
-                    "chrome": "chrome",
-                    "youtube": "chrome youtube.com",
-                    "whatsapp": "whatsapp://",
-                    "notepad": "notepad"
-                }
-                mapped_cmd = app_map.get(str(command).lower(), str(command))
-                subprocess.Popen(["powershell", "-Command", f"Start-Process {mapped_cmd}"], 
+            elif action == "youtube_search":
+                query = task.get("query") or str(command)
+                search_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}"
+                subprocess.Popen(["powershell", "-Command", f"Start-Process '{search_url}'"],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                return {"status": "dispatched", "message": f"App launch dispatched: {mapped_cmd}"}
-                    
+                return {"status": "dispatched", "message": f"YouTube search dispatched for: {query}"}
+
+            elif action == "web_search":
+                query = task.get("query") or str(command)
+                search_url = f"https://www.google.com/search?q={urllib.parse.quote(query)}"
+                subprocess.Popen(["powershell", "-Command", f"Start-Process '{search_url}'"],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return {"status": "dispatched", "message": f"Web search dispatched for: {query}"}
+
+            elif action == "get_time":
+                import datetime
+                now_str = datetime.datetime.now().strftime("%I:%M %p")
+                return {"status": "success", "result": f"The current time is {now_str}."}
+
+            elif action == "get_date":
+                import datetime
+                date_str = datetime.datetime.now().strftime("%A, %B %d, %Y")
+                return {"status": "success", "result": f"Today is {date_str}."}
+
+            elif action == "take_screenshot":
+                try:
+                    from PIL import ImageGrab
+                    import os, time
+                    os.makedirs("screenshots", exist_ok=True)
+                    filename = f"screenshots/screenshot_{int(time.time())}.png"
+                    img = ImageGrab.grab()
+                    img.save(filename)
+                    return {"status": "success", "result": f"Screenshot captured and saved as {filename}."}
+                except Exception as e:
+                    return {"status": "error", "message": f"Could not capture screenshot: {e}"}
+
+            elif action == "volume_control":
+                vol_cmd = str(command).lower()
+                if "mute" in vol_cmd:
+                    script = "(New-Object -ComObject WScript.Shell).SendKeys([char]173)"
+                elif "increase" in vol_cmd or "up" in vol_cmd or "raise" in vol_cmd:
+                    script = "1..5 | ForEach-Object { (New-Object -ComObject WScript.Shell).SendKeys([char]175) }"
+                else:
+                    script = "1..5 | ForEach-Object { (New-Object -ComObject WScript.Shell).SendKeys([char]174) }"
+                subprocess.run(["powershell", "-Command", script], capture_output=True)
+                return {"status": "success", "result": f"Volume command executed: {command}"}
+            elif action == "perform_ui_action":
+                cmd = str(command).lower().strip()
+                try:
+                    import pyautogui
+                    pyautogui.FAILSAFE = False
+                    if cmd.startswith("type "):
+                        text = command[5:]
+                        pyautogui.write(text, interval=0.05)
+                        return {"status": "success", "result": f"Typed: {text}"}
+                    elif cmd.startswith("press "):
+                        key = command[6:].strip()
+                        pyautogui.press(key)
+                        return {"status": "success", "result": f"Pressed key: {key}"}
+                    elif cmd.startswith("click"):
+                        pyautogui.click()
+                        return {"status": "success", "result": "Clicked mouse"}
+                    elif cmd.startswith("scroll up"):
+                        pyautogui.scroll(500)
+                        return {"status": "success", "result": "Scrolled up"}
+                    elif cmd.startswith("scroll down"):
+                        pyautogui.scroll(-500)
+                        return {"status": "success", "result": "Scrolled down"}
+                    else:
+                        return {"status": "error", "message": f"Unsupported UI action: {cmd}"}
+                except ImportError:
+                    return {"status": "error", "message": "pyautogui is required for UI automation."}
+                except Exception as e:
+                    return {"status": "error", "message": f"UI action failed: {str(e)}"}
+
+            elif action == "open_website":
+                from packages.core.application_registry import ApplicationRegistry
+                reg = ApplicationRegistry()
+                if isinstance(command, dict):
+                    url = command.get("url", "https://google.com")
+                    name = command.get("name", "Website")
+                else:
+                    url = f"https://{command}.com" if not str(command).startswith("http") else str(command)
+                    name = str(command)
+                reg.launch(url)
+                return {"status": "success", "result": f"Opened {name.title()} in browser.", "message": f"Website launch dispatched: {url}"}
+
+            elif action in ["open_application", "open_all_applications", "open_multiple_applications"]:
+                from packages.core.application_registry import ApplicationRegistry
+                reg = ApplicationRegistry()
+                
+                # Case 1: Open all applications
+                if action == "open_all_applications" or str(command).lower().strip() in ["all", "all applications", "all apps", "all the applications", "everything", "all my apps"]:
+                    target_apps = reg.get_common_applications()
+                    opened = []
+                    for app in target_apps:
+                        if reg.launch(app):
+                            opened.append(app.title())
+                    return {
+                        "status": "success",
+                        "action": "open_all_applications",
+                        "result": f"Opened all applications: {', '.join(opened)}",
+                        "message": f"Opened all applications: {', '.join(opened)}",
+                        "opened_apps": opened
+                    }
+                
+                # Case 2: Open multiple applications
+                elif action == "open_multiple_applications" or (" and " in str(command).lower() or "," in str(command)):
+                    app_list = reg.parse_multiple(str(command))
+                    opened = []
+                    for app in app_list:
+                        if reg.launch(app):
+                            opened.append(app.title())
+                    return {
+                        "status": "success",
+                        "action": "open_multiple_applications",
+                        "result": f"Opened: {', '.join(opened)}",
+                        "message": f"Opened: {', '.join(opened)}",
+                        "opened_apps": opened
+                    }
+                
+                # Case 3: Single application
+                else:
+                    target_str = str(command).strip()
+                    # Check if user specifically requested browser / web
+                    if "browser" in target_str.lower() or "web" in target_str.lower():
+                        from packages.core.website_registry import WebsiteRegistry
+                        w_reg = WebsiteRegistry()
+                        w_info = w_reg.resolve_website(target_str)
+                        if w_info and w_info.get("url"):
+                            reg.launch(w_info["url"])
+                            return {"status": "success", "result": f"Opened {w_info.get('name', target_str)} in browser.", "message": f"Opened {w_info['url']}"}
+                            
+                    reg.launch(target_str)
+                    clean_title = target_str.title()
+                    return {"status": "success", "result": f"Opened {clean_title}.", "message": f"App launch dispatched: {target_str}", "target": target_str}
+
             elif action == "calculation":
-                safe_cmd = str(command).replace("times", "*").replace("plus", "+").replace("minus", "-").replace("divided by", "/")
-                result = subprocess.run(["powershell", "-Command", safe_cmd], capture_output=True, text=True, timeout=5)
+                safe_expr = str(command).lower()
+                safe_expr = safe_expr.replace("times", "*").replace("multiplied by", "*").replace("into", "*")
+                safe_expr = safe_expr.replace("plus", "+").replace("minus", "-").replace("divided by", "/").replace("over", "/")
+                safe_expr = safe_expr.replace("^", "**")
+                clean_expr = re.sub(r'[^0-9\+\-\*\/\.\(\)\s]', '', safe_expr).strip()
+                if clean_expr:
+                    try:
+                        calc_result = eval(clean_expr, {"__builtins__": None}, {})
+                        return {"status": "success", "result": str(calc_result)}
+                    except Exception:
+                        pass
+                result = subprocess.run(["powershell", "-Command", safe_expr], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
                     return {"status": "success", "result": result.stdout.strip()}
                 else:
                     return {"status": "error", "result": result.stderr.strip()}
 
-            elif action == "close_application":
-                verify_cmd = f"Stop-Process -Name *{command}* -ErrorAction SilentlyContinue"
-                subprocess.run(["powershell", "-Command", verify_cmd], capture_output=True, text=True)
-                return {"status": "dispatched", "message": "Close app dispatched."}
+            elif action in ["close_application", "close_all_applications"]:
+                from packages.core.application_registry import ApplicationRegistry
+                reg = ApplicationRegistry()
+                
+                if action == "close_all_applications" or str(command).lower().strip() in ["all", "all applications", "all apps", "everything", "all of them"]:
+                    target_apps = reg.get_common_applications()
+                    closed = []
+                    for app in target_apps:
+                        resolved_app = reg.resolve(app)
+                        verify_cmd = f"Stop-Process -Name *{resolved_app}* -ErrorAction SilentlyContinue"
+                        subprocess.run(["powershell", "-Command", verify_cmd], capture_output=True, text=True)
+                        closed.append(app.title())
+                    return {"status": "success", "result": f"Closed applications: {', '.join(closed)}", "message": "Close all apps dispatched."}
+                else:
+                    resolved_app = reg.resolve(str(command))
+                    verify_cmd = f"Stop-Process -Name *{resolved_app}* -ErrorAction SilentlyContinue"
+                    subprocess.run(["powershell", "-Command", verify_cmd], capture_output=True, text=True)
+                    return {"status": "dispatched", "message": "Close app dispatched."}
                 
             elif action == "focus_application":
                 script = f"$wshell = New-Object -ComObject wscript.shell; $wshell.AppActivate('{command}')"

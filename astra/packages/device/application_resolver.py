@@ -1,6 +1,7 @@
 import os
 import winreg
 from typing import Optional, Dict, Any
+from packages.core.application_registry import ApplicationRegistry
 
 class ApplicationResolver:
     """
@@ -8,19 +9,26 @@ class ApplicationResolver:
     Does NOT rely on hardcoded paths.
     """
     def __init__(self):
-        # A mock cache of known mappings that would normally be built by scanning 
-        # Start Menu shortcuts, Windows Registry, etc.
+        self._registry = ApplicationRegistry()
         self._known_apps = {
             "whatsapp": "whatsapp://",
             "whatsapp desktop": "whatsapp://",
             "calculator": "calc.exe",
+            "calc": "calc.exe",
             "vs code": "code.exe",
             "visual studio code": "code.exe",
+            "code": "code.exe",
             "file explorer": "explorer.exe",
             "settings": "ms-settings:",
             "chrome": "chrome.exe",
             "edge": "msedge.exe",
-            "youtube": "chrome.exe", # Defaults to opening browser if app not found
+            "youtube": "chrome.exe",
+            "notepad": "notepad.exe",
+            "terminal": "wt.exe",
+            "word": "winword.exe",
+            "excel": "excel.exe",
+            "powerpoint": "powerpnt.exe",
+            "paint": "mspaint.exe"
         }
 
     def resolve_application(self, app_name: str) -> Optional[Dict[str, Any]]:
@@ -33,13 +41,19 @@ class ApplicationResolver:
         # 1. Check known mappings
         if app_name_lower in self._known_apps:
             executable = self._known_apps[app_name_lower]
-            # Usually we'd resolve full path via registry here.
-            # E.g., winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths...")
             return {
                 "name": app_name,
                 "executable": executable,
                 "launch_method": "shell_execute" if ":" in executable else "process"
             }
         
-        # 2. Fallback to generic search (mocked)
+        # 2. Dynamic resolution via ApplicationRegistry
+        resolved = self._registry.resolve(app_name)
+        if resolved:
+            return {
+                "name": app_name,
+                "executable": resolved if (resolved.endswith(".exe") or ":" in resolved or resolved.endswith(".lnk")) else f"{resolved}.exe",
+                "launch_method": "shell_execute" if ":" in resolved else "process"
+            }
+            
         return None

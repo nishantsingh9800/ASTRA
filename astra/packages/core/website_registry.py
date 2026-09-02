@@ -10,6 +10,7 @@ class WebsiteRegistry:
         self.website_map: Dict[str, str] = {
             "youtube": "https://www.youtube.com/",
             "yt": "https://www.youtube.com/",
+            "google": "https://www.google.com/",
             "gmail": "https://mail.google.com/",
             "google mail": "https://mail.google.com/",
             "github": "https://github.com/",
@@ -17,7 +18,23 @@ class WebsiteRegistry:
             "google drive": "https://drive.google.com/",
             "drive": "https://drive.google.com/",
             "wikipedia": "https://www.wikipedia.org/",
-            "whatsapp web": "https://web.whatsapp.com/"
+            "whatsapp web": "https://web.whatsapp.com/",
+            "whatsapp on browser": "https://web.whatsapp.com/",
+            "whatsapp in browser": "https://web.whatsapp.com/",
+            "whatsapp browser": "https://web.whatsapp.com/",
+            "web whatsapp": "https://web.whatsapp.com/",
+            "web.whatsapp.com": "https://web.whatsapp.com/",
+            "reddit": "https://www.reddit.com/",
+            "twitter": "https://twitter.com/",
+            "x": "https://x.com/",
+            "amazon": "https://www.amazon.com/",
+            "netflix": "https://www.netflix.com/",
+            "spotify": "https://open.spotify.com/",
+            "chatgpt": "https://chat.openai.com/",
+            "stackoverflow": "https://stackoverflow.com/",
+            "linkedin": "https://www.linkedin.com/",
+            "instagram": "https://www.instagram.com/",
+            "facebook": "https://www.facebook.com/"
         }
         
     def resolve_alias(self, alias: str) -> str:

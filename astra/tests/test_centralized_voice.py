@@ -5,7 +5,10 @@ from packages.network.distributed_task_state import DistributedTaskState
 from packages.voice.speech_manager import SpeechManager
 from packages.core.conversation_turn_manager import ConversationTurnManager
 from packages.network.astra_server import AstraServer
-from astra.tests.mock_android_client import MockAndroidClient
+try:
+    from tests.mock_android_client import MockAndroidClient
+except ImportError:
+    from astra.tests.mock_android_client import MockAndroidClient
 
 def test_centralized_voice_and_turn_management():
     manager = DeviceManager()
