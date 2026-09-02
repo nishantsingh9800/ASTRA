@@ -29,6 +29,13 @@ class AACService:
         """Assembles the current buffer into a full phrase string."""
         return " ".join(self._current_sentence)
 
+    def speak_phrase(self, phrase: str) -> str:
+        """Processes and records a spoken AAC phrase."""
+        self.select_word(phrase)
+        msg = self.construct_message()
+        self.clear()
+        return msg
+
     def clear(self) -> None:
         """Clears the buffer after execution."""
         self._current_sentence.clear()

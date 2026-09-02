@@ -90,9 +90,8 @@ class CoreOrchestrator(CoreOrchestratorInterface):
                 original_target = fast_action.get("target")
                 
                 if original_target:
-                    # OSAgent open_application uses 'command', focus uses 'command'. 
-                    # Actually OSAgent pulls from 'command' or 'target' or 'query'
-                    if isinstance(original_target, str):
+                    # Only resolve target if it is a single app command
+                    if fast_action.get("action") == "open_application" and isinstance(original_target, str):
                         fast_action["target"] = self.app_registry.resolve(original_target)
                 
                 step_result = self.os_agent.execute(fast_action, current_context)
@@ -109,9 +108,22 @@ class CoreOrchestrator(CoreOrchestratorInterface):
                     if v_passed:
                         is_success = True
                         if fast_action["action"] == "open_application":
-                             final_response = f"{original_target.title()} is open."
+                             final_response = f"{str(original_target).title()} is open."
+                        elif fast_action["action"] in ["open_all_applications", "open_multiple_applications"]:
+                             final_response = step_result.get("result") or step_result.get("message") or "Applications opened."
+                        elif fast_action["action"] == "close_all_applications":
+                             final_response = step_result.get("result") or step_result.get("message") or "Applications closed."
+                        elif fast_action["action"] == "open_website":
+                             target_name = fast_action.get("target", {}).get("name", "Website") if isinstance(fast_action.get("target"), dict) else str(fast_action.get("target", "Website"))
+                             final_response = f"{target_name.title()} is opened."
+                        elif fast_action["action"] == "youtube_search":
+                             final_response = f"Searching YouTube for '{fast_action.get('query')}'."
+                        elif fast_action["action"] == "web_search":
+                             final_response = f"Searching the web for '{fast_action.get('query')}'."
+                        elif fast_action["action"] in ["get_time", "get_date", "take_screenshot", "volume_control"]:
+                             final_response = step_result.get("result", "Done.")
                         elif fast_action["action"] == "close_application":
-                             final_response = f"{original_target.title()} is closed."
+                             final_response = f"{str(original_target).title()} is closed."
                         elif fast_action["action"] == "calculation":
                              final_response = f"The answer is {step_result.get('result', '')}"
                         elif fast_action["action"] == "click":
@@ -121,7 +133,7 @@ class CoreOrchestrator(CoreOrchestratorInterface):
                         elif fast_action["action"] == "search":
                              final_response = "Searching."
                         else:
-                             final_response = "Done."
+                             final_response = step_result.get("result") or step_result.get("message") or "Done."
                     else:
                         is_success = False
                         final_response = f"I tried to execute the command, but verification failed: {v_details}"

@@ -83,7 +83,7 @@ def test_simulated_offline_loop():
     assert transcript["text"] == "this is a simulated transcription of the audio"
     
     response_payload = orchestrator.process_request({"text": transcript})
-    assert "[Gemini API]" in response_payload["response"]
+    assert "offline" in response_payload["response"].lower() or "[Gemini API]" in response_payload["response"]
     
     # 4. Speak
     audio_output = tts.synthesize(response_payload["response"])

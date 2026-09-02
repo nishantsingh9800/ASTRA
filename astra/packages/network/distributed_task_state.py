@@ -9,11 +9,21 @@ class DistributedTaskState:
     def __init__(self):
         # Format: { "key": {"value": Any, "timestamp": float, "writer": str} }
         self._state: Dict[str, Dict[str, Any]] = {}
+        self._active_device = "local_core"
+        self.set("active_device", self._active_device, "local_core")
 
     def get(self, key: str) -> Optional[Any]:
         if key in self._state:
             return self._state[key]["value"]
         return None
+
+    def set_active_device(self, device_id: str) -> None:
+        """Tracks the current primary interaction endpoint for handoff and routing."""
+        self._active_device = device_id
+        self.set("active_device", device_id, "local_core")
+
+    def get_active_device(self) -> str:
+        return self._active_device
 
     def set(self, key: str, value: Any, writer_id: str) -> None:
         """

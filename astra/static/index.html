@@ -3,57 +3,500 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASTRA 2.0 Web Interface</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>ASTRA 2.0 - Complete AI Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
+        <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="logo-area">
-                <div class="logo-icon"></div>
-                <h1>ASTRA <span>2.0</span></h1>
+                <div class="logo-icon">🤖</div>
+                <div>
+                    <h1>ASTRA <span>2.0</span></h1>
+                    <p class="subtitle">Autonomous AI Assistant</p>
+                </div>
             </div>
-            <nav>
-                <div class="nav-item active">Chat</div>
-                <div class="nav-item">Capabilities</div>
-                <div class="nav-item">Settings</div>
+            
+            <nav class="main-nav">
+                <div class="nav-item active" data-tab="chat">💬 Chat & Assistant</div>
+                <div class="nav-item" data-tab="vision">👁️ Vision & Perception</div>
+                <div class="nav-item" data-tab="safety">🛡️ Safety & SOS Center</div>
+                <div class="nav-item" data-tab="devices">🔄 Device & Apps Hub</div>
+                <div class="nav-item" data-tab="accessibility">♿ Accessibility Studio</div>
+                <div class="nav-item" data-tab="ai">🧠 AI & Specialized Agents</div>
+                <div class="nav-item" data-tab="voice">🎤 Voice & Audio Controls</div>
             </nav>
+            
             <div class="system-status">
                 <div class="status-dot"></div>
-                <span>System Online</span>
+                <span id="sidebar-status-text">All Systems Operational</span>
             </div>
         </aside>
         
-        <!-- Main Chat Area -->
-        <main class="chat-area">
-            <header class="chat-header">
-                <h2>Assistant</h2>
+        <!-- Main Content Area -->
+        <main class="content-area">
+            <header class="main-header">
+                <h2 id="section-title">💬 Chat & Assistant</h2>
                 <div class="header-tools">
+                    <button id="tts-toggle-btn" class="icon-btn active" title="Voice Responses (TTS: ON)">🔊</button>
+                    <button id="refresh-btn" class="icon-btn" title="Refresh State">🔄</button>
                     <button id="clear-btn" class="icon-btn" title="Clear Chat">🗑️</button>
                 </div>
             </header>
             
-            <div id="message-container" class="message-container">
-                <div class="message astra">
-                    <div class="avatar"></div>
-                    <div class="content">
-                        Hello! I am ASTRA 2.0. How can I assist you today?
+            <!-- 1. CHAT TAB -->
+            <div id="chat-tab" class="tab-content active">
+                <div id="message-container" class="message-container">
+                    <div class="message astra">
+                        <div class="avatar">🤖</div>
+                        <div class="content">
+                            <strong>Welcome to ASTRA 2.0!</strong><br>
+                            I'm your autonomous assistant with full voice recognition, live vision, system control, safety monitoring, and accessibility features.<br><br>
+                            👉 <strong>Try saying or typing:</strong>
+                            <ul style="margin-top: 8px; margin-left: 20px; line-height: 1.6;">
+                                <li><em>"Open Calculator"</em> or <em>"Open Notepad and Chrome"</em></li>
+                                <li><em>"Open all applications"</em></li>
+                                <li><em>"Search YouTube for Main Hoon Na"</em></li>
+                                <li><em>"Calculate 245 * 38"</em></li>
+                                <li><em>"What is the time?"</em> or <em>"Take a screenshot"</em></li>
+                            </ul>
+                            <p style="margin-top: 8px;">💡 <em>Click the <strong>🎤 Mic button</strong> below to speak your commands directly, or explore the live interactive tools in the left sidebar!</em></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-area">
+                    <div id="voice-indicator" class="voice-indicator hidden">
+                        <span class="pulse-dot"></span>
+                        <span id="voice-status-text">Listening... Speak now</span>
+                    </div>
+                    <form id="chat-form">
+                        <button type="button" id="mic-btn" class="mic-btn" title="Click to speak (Speech Recognition)">🎤</button>
+                        <input type="text" id="chat-input" placeholder="Type or click 🎤 to speak a command..." autocomplete="off">
+                        <button type="submit" id="send-btn" title="Send message">➤</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 2. VISION & PERCEPTION TAB (LIVE & REAL-TIME) -->
+            <div id="vision-tab" class="tab-content">
+                <div class="interactive-grid">
+                    <!-- Live Camera Feed -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>📷 Live Camera & Object Recognition</h3>
+                            <span class="badge live-badge" id="camera-status-badge">Camera Standby</span>
+                        </div>
+                        <p class="panel-desc">Real-time video feed with OpenCV face, person, and spatial object detection.</p>
+                        
+                        <div class="video-container" id="video-container">
+                            <video id="webcam-video" autoplay playsinline muted></video>
+                            <canvas id="webcam-canvas"></canvas>
+                            <div id="camera-placeholder" class="camera-placeholder">
+                                <div class="cam-icon">📹</div>
+                                <p>Click "Start Live Camera" to enable real-time webcam processing</p>
+                            </div>
+                        </div>
+                        
+                        <div class="button-row">
+                            <button id="start-cam-btn" class="btn btn-primary">▶️ Start Live Camera</button>
+                            <button id="stop-cam-btn" class="btn btn-secondary" disabled>⏹️ Stop Camera</button>
+                            <button id="snap-cam-btn" class="btn btn-accent" disabled>📸 Capture & Detect</button>
+                        </div>
+                        
+                        <div id="vision-detections-hud" class="hud-box">
+                            <strong>Detection HUD:</strong> <span id="detection-summary">Waiting for video stream...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Screen Capture & OCR -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>🖥️ Desktop Screen Perception & OCR</h3>
+                            <span class="badge">Optical Engine</span>
+                        </div>
+                        <p class="panel-desc">Capture full desktop display, analyze visual workspace, and extract text.</p>
+                        
+                        <div class="screen-preview-box" id="screen-preview-box">
+                            <img id="screen-preview-img" style="display: none; max-width: 100%; border-radius: 8px;" alt="Captured Desktop">
+                            <div id="screen-placeholder" class="screen-placeholder">
+                                <span>🖥️ No screen capture taken yet</span>
+                            </div>
+                        </div>
+                        
+                        <div class="button-row">
+                            <button id="capture-screen-btn" class="btn btn-primary">📸 Capture Desktop Screen</button>
+                            <button id="ocr-screen-btn" class="btn btn-accent">🔍 Extract Text (OCR)</button>
+                        </div>
+                        
+                        <div class="ocr-output-box">
+                            <h4>Extracted Text Context:</h4>
+                            <div id="ocr-text-content" class="code-box">Click 'Extract Text (OCR)' or 'Capture Desktop Screen' to analyze open workspace context.</div>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <div class="input-area">
-                <form id="chat-form">
-                    <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
-                    <button type="submit" id="send-btn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                        </svg>
-                    </button>
-                </form>
+            <!-- 3. SAFETY & SOS CENTER (LIVE & INTERACTIVE) -->
+            <div id="safety-tab" class="tab-content">
+                <div class="interactive-grid">
+                    <!-- SOS Emergency Controller -->
+                    <div class="panel-card sos-card">
+                        <div class="panel-header">
+                            <h3>🚨 Emergency SOS Control Center</h3>
+                            <span class="badge" id="sos-state-badge">NORMAL</span>
+                        </div>
+                        <p class="panel-desc">30-second automated emergency verification countdown with escalation to contacts & services.</p>
+                        
+                        <div class="sos-countdown-display" id="sos-countdown-display">
+                            <div class="countdown-circle" id="countdown-circle">
+                                <span id="sos-timer-number">30</span>
+                                <span class="sec-label">SEC</span>
+                            </div>
+                            <div class="sos-status-text" id="sos-status-text">System Armed & Monitoring</div>
+                        </div>
+                        
+                        <div class="button-row">
+                            <button id="trigger-sos-btn" class="btn btn-danger">🚨 Trigger Emergency SOS</button>
+                            <button id="cancel-sos-btn" class="btn btn-success" disabled>✅ Cancel SOS (I Am Safe)</button>
+                            <button id="confirm-sos-btn" class="btn btn-warning" disabled>📡 Dispatch Alert Now</button>
+                        </div>
+                        
+                        <div id="sos-telemetry-box" class="telemetry-box">
+                            <strong>Dispatch Payload:</strong>
+                            <div id="sos-telemetry-data">Location: 28.6139° N, 77.2090° E | Device: Laptop Astra | Status: Ready</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Accident & Fall Simulator -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>💥 Multi-Signal Crash & Fall Detector</h3>
+                            <span class="badge">Telemetry Fusion</span>
+                        </div>
+                        <p class="panel-desc">Simulate 3-axis accelerometer impact spikes and evaluate multi-sensor evidence.</p>
+                        
+                        <div class="sensor-gauges">
+                            <div class="gauge-item">
+                                <span class="gauge-label">Impact Force (G)</span>
+                                <div class="gauge-bar-bg"><div id="gauge-gforce" class="gauge-bar-fill" style="width: 15%;"></div></div>
+                                <span id="val-gforce" class="gauge-val">0.2 G</span>
+                            </div>
+                            <div class="gauge-item">
+                                <span class="gauge-label">Tilt Angle (°)</span>
+                                <div class="gauge-bar-bg"><div id="gauge-tilt" class="gauge-bar-fill" style="width: 10%;"></div></div>
+                                <span id="val-tilt" class="gauge-val">5°</span>
+                            </div>
+                            <div class="gauge-item">
+                                <span class="gauge-label">Audio Decibel (dB)</span>
+                                <div class="gauge-bar-bg"><div id="gauge-audio" class="gauge-bar-fill" style="width: 25%;"></div></div>
+                                <span id="val-audio" class="gauge-val">42 dB</span>
+                            </div>
+                        </div>
+                        
+                        <div class="button-row">
+                            <button id="sim-fall-btn" class="btn btn-danger">💥 Simulate Severe Fall (8.5G Impact)</button>
+                            <button id="sim-normal-btn" class="btn btn-secondary">🚶 Simulate Normal Walk (0.2G)</button>
+                        </div>
+                        
+                        <div id="accident-report-box" class="hud-box">
+                            <strong>Evidence Corroboration:</strong> <span id="accident-report-text">Normal movement telemetry. No incident detected.</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Command Safety Sandbox -->
+                    <div class="panel-card full-width">
+                        <div class="panel-header">
+                            <h3>🛡️ Destructive Command Bounding & Safe Mode Sandbox</h3>
+                            <span class="badge badge-success" id="safemode-badge">Safe Mode Active</span>
+                        </div>
+                        <p class="panel-desc">Test dangerous OS commands against ASTRA's safety filter before local execution.</p>
+                        
+                        <div class="command-verify-row">
+                            <input type="text" id="verify-cmd-input" value="rmdir /s /q c:\windows" placeholder="Enter OS command to test safety bounding...">
+                            <button id="verify-cmd-btn" class="btn btn-primary">🛡️ Verify Safety</button>
+                        </div>
+                        <div id="verify-cmd-result" class="code-box">Enter any command above or click 'Verify Safety' to inspect protection filters.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 4. DEVICES & APPS HUB (INSTALLED APPS + MOBILE PAIRING) -->
+            <div id="devices-tab" class="tab-content">
+                <!-- Host Telemetry & Mobile Pairing Header -->
+                <div class="host-info-card">
+                    <div class="host-details">
+                        <div class="host-icon">💻</div>
+                        <div>
+                            <h3 id="host-name-title">Laptop Astra</h3>
+                            <p id="host-os-details">Windows 11 | CPU: 8 Cores | RAM: Active</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mobile-pairing-box">
+                        <div class="qr-preview">📱</div>
+                        <div>
+                            <strong>Open on Mobile / Tablet:</strong>
+                            <div class="pairing-url-row">
+                                <code id="mobile-url-text">http://192.168.1.4:5000</code>
+                                <button id="copy-mobile-url-btn" class="btn btn-sm btn-secondary">📋 Copy Link</button>
+                                <button id="handoff-task-btn" class="btn btn-sm btn-accent">📲 Handoff Task</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Installed Applications Catalog -->
+                <div class="panel-card" style="margin-top: 20px;">
+                    <div class="panel-header">
+                        <h3>🚀 Installed Applications on Laptop (1-Click Launch)</h3>
+                        <input type="text" id="app-search-input" class="search-input" placeholder="🔍 Search installed apps (Word, Chrome, VS Code, Calc)...">
+                    </div>
+                    <p class="panel-desc">Direct system integration indexing all software installed on your machine via Windows Registry and Start Menu.</p>
+                    
+                    <div id="apps-catalog-grid" class="apps-catalog-grid">
+                        <div class="loading-spinner">Loading indexed applications...</div>
+                    </div>
+                </div>
+                
+                <!-- Active Running Tasks & Window Control -->
+                <div class="panel-card" style="margin-top: 20px;">
+                    <div class="panel-header">
+                        <h3>🖥️ Active Applications & Windows Manager</h3>
+                        <button id="refresh-windows-btn" class="btn btn-sm btn-secondary">🔄 Refresh Active Tasks</button>
+                    </div>
+                    <p class="panel-desc">View and manage applications currently running on your computer.</p>
+                    
+                    <div id="windows-list-container" class="windows-list-container">
+                        <div class="loading-spinner">Fetching active window states...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 5. ACCESSIBILITY STUDIO (AAC, BRAILLE, DYSLEXIA, GESTURES) -->
+            <div id="accessibility-tab" class="tab-content">
+                <div class="interactive-grid">
+                    <!-- AAC Soundboard -->
+                    <div class="panel-card full-width">
+                        <div class="panel-header">
+                            <h3>🗣️ AAC (Augmentative & Alternative Communication) Soundboard</h3>
+                            <span class="badge">Speech Grid</span>
+                        </div>
+                        <p class="panel-desc">Click any card to synthesize immediate vocal communication for non-verbal users.</p>
+                        
+                        <div class="aac-grid" id="aac-grid">
+                            <div class="aac-card" data-phrase="I need assistance, please help me." data-symbol="Help">
+                                <span class="aac-icon">🆘</span>
+                                <span class="aac-title">Help</span>
+                            </div>
+                            <div class="aac-card" data-phrase="Yes, I agree." data-symbol="Yes">
+                                <span class="aac-icon">👍</span>
+                                <span class="aac-title">Yes</span>
+                            </div>
+                            <div class="aac-card" data-phrase="No, I do not want that." data-symbol="No">
+                                <span class="aac-icon">👎</span>
+                                <span class="aac-title">No</span>
+                            </div>
+                            <div class="aac-card" data-phrase="I need a glass of water." data-symbol="Water">
+                                <span class="aac-icon">💧</span>
+                                <span class="aac-title">Water</span>
+                            </div>
+                            <div class="aac-card" data-phrase="I am hungry and need food." data-symbol="Food">
+                                <span class="aac-icon">🍲</span>
+                                <span class="aac-title">Food</span>
+                            </div>
+                            <div class="aac-card" data-phrase="Please call my caregiver or family." data-symbol="Call">
+                                <span class="aac-icon">📞</span>
+                                <span class="aac-title">Call Family</span>
+                            </div>
+                            <div class="aac-card" data-phrase="I am experiencing pain or need medicine." data-symbol="Medicine">
+                                <span class="aac-icon">💊</span>
+                                <span class="aac-title">Medicine</span>
+                            </div>
+                            <div class="aac-card" data-phrase="I need to use the restroom." data-symbol="Restroom">
+                                <span class="aac-icon">🚻</span>
+                                <span class="aac-title">Restroom</span>
+                            </div>
+                            <div class="aac-card" data-phrase="Thank you very much." data-symbol="Thank You">
+                                <span class="aac-icon">🙏</span>
+                                <span class="aac-title">Thank You</span>
+                            </div>
+                            <div class="aac-card" data-phrase="Please stop and wait." data-symbol="Stop">
+                                <span class="aac-icon">🛑</span>
+                                <span class="aac-title">Stop</span>
+                            </div>
+                            <div class="aac-card" data-phrase="Please turn on the room lights." data-symbol="Lights">
+                                <span class="aac-icon">💡</span>
+                                <span class="aac-title">Lights</span>
+                            </div>
+                            <div class="aac-card alert-card" data-phrase="Emergency! I need immediate help!" data-symbol="Emergency">
+                                <span class="aac-icon">🚨</span>
+                                <span class="aac-title">Emergency</span>
+                            </div>
+                        </div>
+                        <div id="aac-speech-feedback" class="hud-box">
+                            <strong>Spoken Output:</strong> <span id="aac-spoken-text">Click any tile above to speak aloud.</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Braille Transliterator -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>⠃⠗⠁⠊⠇⠇⠑ Interactive Braille Transliterator</h3>
+                            <span class="badge">Grade 1 Unicode</span>
+                        </div>
+                        <p class="panel-desc">Type any text to convert instantly into standard Grade 1 tactile Braille patterns.</p>
+                        
+                        <input type="text" id="braille-input" value="hello astra" class="search-input" style="margin-bottom: 12px;" placeholder="Type text to translate into Braille...">
+                        
+                        <div class="braille-display-box" id="braille-display-box">
+                            <div class="braille-text" id="braille-output">⠓⠑⠇⠇⠕ ⠁⠎⠞⠗⠁</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dyslexia & Cognitive Reading Assistant -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>📖 Cognitive Reading Assistant</h3>
+                            <span class="badge">Adaptive Text</span>
+                        </div>
+                        <p class="panel-desc">Text-to-speech reader with customizable speed, high-contrast, and dyslexic spacing.</p>
+                        
+                        <textarea id="reading-text-input" class="reading-textarea" rows="3">ASTRA 2.0 makes technology accessible, intuitive, and autonomous for all people.</textarea>
+                        
+                        <div class="reading-controls">
+                            <label>Speed: <span id="speed-val">1.0x</span></label>
+                            <input type="range" id="reading-speed-slider" min="0.5" max="2.0" step="0.25" value="1.0">
+                            <button id="toggle-dyslexia-font" class="btn btn-sm btn-secondary">🔤 Dyslexia Font</button>
+                            <button id="toggle-contrast-btn" class="btn btn-sm btn-secondary">🌓 High Contrast</button>
+                            <button id="start-reading-btn" class="btn btn-sm btn-primary">▶️ Read Aloud</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Gesture Control & Haptic Feedback -->
+                    <div class="panel-card full-width">
+                        <div class="panel-header">
+                            <h3>🖐️ Gesture Input Triggers & Haptic Feedback</h3>
+                            <span class="badge">Tactile & Motion</span>
+                        </div>
+                        <p class="panel-desc">Test gesture action routing and trigger mobile/device vibration feedback.</p>
+                        
+                        <div class="gesture-row">
+                            <button class="btn btn-secondary gesture-btn" data-gesture="thumbs_up">👍 Thumbs Up (Confirm)</button>
+                            <button class="btn btn-secondary gesture-btn" data-gesture="peace">✌️ Peace (Greeting)</button>
+                            <button class="btn btn-secondary gesture-btn" data-gesture="wave">👋 Wave (Wake Mode)</button>
+                            <button class="btn btn-secondary gesture-btn" data-gesture="stop">✋ Open Palm (Stop Task)</button>
+                            <button class="btn btn-secondary gesture-btn" data-gesture="fist">✊ Fist (Mute Audio)</button>
+                            <button id="trigger-haptic-btn" class="btn btn-accent">📳 Trigger Haptic Pulse</button>
+                        </div>
+                        <div id="gesture-feedback" class="hud-box" style="margin-top: 12px;">
+                            <strong>Gesture Status:</strong> <span id="gesture-result-text">Click a gesture trigger above.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 6. AI & SPECIALIZED AGENTS WORKSPACE -->
+            <div id="ai-tab" class="tab-content">
+                <div class="agent-grid">
+                    <!-- Research Agent -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>🌐 Research Agent</h3>
+                            <span class="badge badge-primary">DuckDuckGo Web</span>
+                        </div>
+                        <p class="panel-desc">Autonomous web search, snippet extraction, and source comparison.</p>
+                        <input type="text" id="research-prompt" class="search-input" value="Latest advancements in AI" placeholder="Topic to research...">
+                        <button class="btn btn-primary run-agent-btn" data-agent="research" style="margin-top: 10px;">🔍 Run Web Research</button>
+                        <div id="research-output" class="code-box agent-output">Results will appear here...</div>
+                    </div>
+                    
+                    <!-- Coding Agent -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>💻 Coding Agent</h3>
+                            <span class="badge badge-accent">Code Generator</span>
+                        </div>
+                        <p class="panel-desc">Code synthesis, automated refactoring, and syntax verification.</p>
+                        <input type="text" id="coding-prompt" class="search-input" value="Python async file downloader" placeholder="Coding task...">
+                        <button class="btn btn-accent run-agent-btn" data-agent="coding" style="margin-top: 10px;">⚡ Generate Code</button>
+                        <div id="coding-output" class="code-box agent-output">Code snippets will appear here...</div>
+                    </div>
+                    
+                    <!-- OS Automation Agent -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>🖥️ OS Automation Agent</h3>
+                            <span class="badge badge-success">Local OS</span>
+                        </div>
+                        <p class="panel-desc">Execute native Windows commands, calculations, and tool calls.</p>
+                        <input type="text" id="os-prompt" class="search-input" value="500 * 25 + 40" placeholder="OS task or math expression...">
+                        <button class="btn btn-success run-agent-btn" data-agent="os" style="margin-top: 10px;">⚙️ Run OS Action</button>
+                        <div id="os-output" class="code-box agent-output">Output will appear here...</div>
+                    </div>
+                    
+                    <!-- Browser Automation Agent -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>🧭 Browser Agent</h3>
+                            <span class="badge badge-warning">Web Navigator</span>
+                        </div>
+                        <p class="panel-desc">Automates web browser navigation and contextual search.</p>
+                        <input type="text" id="browser-prompt" class="search-input" value="YouTube Python tutorials" placeholder="Browser query...">
+                        <button class="btn btn-warning run-agent-btn" data-agent="browser" style="margin-top: 10px;">🌐 Navigate Web</button>
+                        <div id="browser-output" class="code-box agent-output">Status will appear here...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 7. VOICE & AUDIO CONTROLS TAB -->
+            <div id="voice-tab" class="tab-content">
+                <div class="interactive-grid">
+                    <div class="panel-card full-width">
+                        <div class="panel-header">
+                            <h3>🎙️ Live Microphone Speech-to-Text (STT)</h3>
+                            <span class="badge live-badge">Continuous Engine</span>
+                        </div>
+                        <p class="panel-desc">Real-time local speech recognition with voice activity detection (VAD).</p>
+                        <div class="button-row">
+                            <button id="voice-tab-mic-btn" class="btn btn-primary">🎙️ Start Live Listening</button>
+                        </div>
+                        <div id="voice-live-transcript" class="live-transcript-box" style="margin-top: 16px;">
+                            <em>Click 'Start Live Listening' and speak into your microphone...</em>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>🔊 Text-to-Speech (TTS) Synthesizer</h3>
+                            <span class="badge">Vocal Engine</span>
+                        </div>
+                        <p class="panel-desc">Synthesize natural high-fidelity vocal responses in real time.</p>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <input type="text" id="tts-sample-input" value="Hello! I am ASTRA, your personal autonomous assistant." class="search-input">
+                            <button class="btn btn-primary" id="tts-speak-sample-btn">▶️ Speak</button>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3>👏 Clap-to-Wake</h3>
+                            <span class="badge live-badge" id="clap-status-badge">Initialising…</span>
+                        </div>
+                        <p class="panel-desc">
+                            <strong>Double-clap</strong> anywhere to instantly wake ASTRA and start listening for your voice command.<br>
+                            Uses real-time microphone amplitude analysis — no internet required.
+                        </p>
+                        <div class="button-row" style="margin-top: 10px;">
+                            <button id="clap-toggle-btn" class="btn btn-primary">👏 Enable Clap-to-Wake</button>
+                        </div>
+                        <div style="margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+                            💡 <em>Allow microphone access when prompted. Works even when ASTRA is in any tab.</em>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
